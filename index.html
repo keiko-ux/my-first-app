@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern ToDo App</title>
+    <style>
+        /* デザインシステム・リセット css */
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #e0e7ff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --border: #e2e8f0;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ダークモード対応（OS設定連動） */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0f172a;
+                --bg-card: #1e293b;
+                --text-primary: #f8fafc;
+                --text-secondary: #94a3b8;
+                --primary: #6366f1;
+                --primary-hover: #4f46e5;
+                --primary-light: #312e81;
+                --border: #334155;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 16px;
+            transition: var(--transition);
+        }
+
+        /* メインコンテナ */
+        .container {
+            width: 100%;
+            max-width: 540px;
+            background-color: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 32px;
+            border: 1px solid var(--border);
+        }
+
+        /* ヘッダー */
+        header {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* 進捗ダッシュボード */
+        .dashboard {
+            background-color: var(--bg-primary);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .stats-label {
+            color: var(--text-secondary);
+        }
+
+        .stats-values {
+            color: var(--text-primary);
+            background-color: var(--bg-card);
+            padding: 4px 10px;
+            border-radius: 9999px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* プログレスバー */
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: var(--border);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--success);
+            border-radius: 9999px;
+            transition: width 0.3s ease;
+        }
+
+        /* タスク入力エリア */
+        .input-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            flex-grow: 1;
+        }
+
+        .todo-input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            background-color: var(--bg-primary);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .todo-input:focus {
+            border-color: var(--primary);
+            background-color: var(--bg-card);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        /* 追加ボタン */
+        .add-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 0 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            white-space: nowrap;
+        }
+
+        .add-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .add-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* フィルタータブ */
+        .filters {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .filter-btn {
+            background: none;
+            border: none;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-btn:hover {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .filter-btn.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* タスク一覧 */
+        .todo-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        /* カスタムスクールバー */
+        .todo-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .todo-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .todo-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 9999px;
+        }
+
+        /* 個別タスクアイテム */
+        .todo-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            gap: 12px;
+            animation: slideIn 0.2s ease-out forwards;
+            transition: var(--transition);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .todo-item:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--text-secondary);
+        }
+
+        /* 完了済みスタイルのトグル */
+        .todo-item.completed {
+            background-color: var(--bg-primary);
+            opacity: 0.7;
+        }
+
+        .todo-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-grow: 1;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* カスタムチェックボックス */
+        .checkbox-container {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--text-secondary);
+            border-radius: 6px;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .todo-item.completed .checkbox-container {
+            background-color: var(--success);
+            border-color: var(--success);
+        }
+
+        .checkbox-icon {
+            display: none;
+            color: white;
+            width: 14px;
+            height: 14px;
+        }
+
+        .todo-item.completed .checkbox-icon {
+            display: block;
+        }
+
+        /* タスクテキスト */
+        .todo-text {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            line-height: 1.4;
+            word-break: break-all;
+            transition: var(--transition);
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        /* 削除ボタン */
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger);
+            background-color: #fee2e2;
+        }
+
+        /* ダークモード時のホバー調整 */
+        @media (prefers-color-scheme: dark) {
+            .delete-btn:hover {
+                background-color: #7f1d1d;
+                color: #fca5a5;
+            }
+        }
+
+        .delete-icon {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* 空ステート */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+        .empty-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* レスポンシブ対応 (モバイル端末) */
+        @media (max-width: 480px) {
+            body {
+                padding: 16px 8px;
+            }
+
+            .container {
+                padding: 20px 16px;
+                border-radius: var(--radius-md);
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .input-form {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .add-btn {
+                width: 100%;
+                padding: 14px;
+            }
+
+            .todo-item {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- ヘッダー -->
+        <header>
+            <h1>マイToDo</h1>
+            <p class="subtitle" id="current-date">今日やるべきこと</p>
+        </header>
+
+        <!-- 進捗状況表示 -->
+        <div class="dashboard">
+            <div class="stats">
+                <span class="stats-label">進捗状況</span>
+                <span class="stats-values" id="task-stats">0 / 0 完了</span>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+
+        <!-- タスク作成フォーム -->
+        <form class="input-form" id="todo-form">
+            <div class="input-wrapper">
+                <input type="text" id="todo-input" class="todo-input" placeholder="新しいタスクを入力..." autocomplete="off" required maxlength="100">
+            </div>
+            <button type="submit" class="add-btn">
+                <!-- プラスアイコン -->
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                追加
+            </button>
+        </form>
+
+        <!-- フィルターセクション -->
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">すべて</button>
+            <button class="filter-btn" data-filter="active">未完了</button>
+            <button class="filter-btn" data-filter="completed">完了</button>
+        </div>
+
+        <!-- タスクリスト -->
+        <ul class="todo-list" id="todo-list">
+            <!-- JavaScriptで動的に生成されます -->
+        </ul>
+    </div>
+
+    <script>
+        // DOM要素の取得
+        const todoForm = document.getElementById('todo-form');
+        const todoInput = document.getElementById('todo-input');
+        const todoList = document.getElementById('todo-list');
+        const taskStats = document.getElementById('task-stats');
+        const progressBar = document.getElementById('progress-bar');
+        const currentDateElement = document.getElementById('current-date');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+
+        // タスクデータの初期化（LocalStorageから読み込み、なければ空配列）
+        let todos = JSON.parse(localStorage.getItem('todos')) || [];
+        let currentFilter = 'all';
+
+        // 日付の表示
+        const setDate = () => {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const today = new Date();
+            currentDateElement.textContent = today.toLocaleDateString('ja-JP', options);
+        };
+
+        // ローカルストレージへの保存
+        const saveToLocalStorage = () => {
+            localStorage.setItem('todos', JSON.stringify(todos));
+        };
+
+        // 進捗状況（カウンターとプログレスバー）の更新
+        const updateStats = () => {
+            const totalTasks = todos.length;
+            const completedTasks = todos.filter(todo => todo.completed).length;
+            
+            taskStats.textContent = `${completedTasks} / ${totalTasks} 完了`;
+            
+            const progressPercentage = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
+            progressBar.style.width = `${progressPercentage}%`;
+        };
+
+        // タスクの追加
+        const addTodo = (text) => {
+            const newTodo = {
+                id: Date.now().toString(),
+                text: text.trim(),
+                completed: false
+            };
+            todos.push(newTodo);
+            saveToLocalStorage();
+            renderTodos();
+            todoInput.value = '';
+        };
+
+        // タスクの削除
+        const deleteTodo = (id) => {
+            todos = todos.filter(todo => todo.id !== id);
+            saveToLocalStorage();
+            renderTodos();
+        };
+
+        // 完了状態のトグル
+        const toggleTodo = (id) => {
+            todos = todos.map(todo => {
+                if (todo.id === id) {
+                    return { ...todo, completed: !todo.completed };
+                }
+                return todo;
+            });
+            saveToLocalStorage();
+            renderTodos();
+        };
+
+        // タスク一覧の描画
+        const renderTodos = () => {
+            todoList.innerHTML = '';
+            
+            // フィルター適用後のタスク
+            const filteredTodos = todos.filter(todo => {
+                if (currentFilter === 'active') return !todo.completed;
+                if (currentFilter === 'completed') return todo.completed;
+                return true; // 'all'
+            });
+
+            if (filteredTodos.length === 0) {
+                // 空ステートの表示
+                let message = 'タスクはありません';
+                let icon = '🎉';
+                if (currentFilter === 'active') {
+                    message = '未完了のタスクはありません';
+                    icon = '✨';
+                } else if (currentFilter === 'completed') {
+                    message = '完了したタスクはありません';
+                    icon = '📝';
+                }
+
+                todoList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">${icon}</div>
+                        <div class="empty-text">${message}</div>
+                    </div>
+                `;
+            } else {
+                // タスクがある場合はリストをループ処理
+                filteredTodos.forEach(todo => {
+                    const li = document.createElement('li');
+                    li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+                    
+                    // 左側エリア（チェックボックス + テキスト）
+                    const leftArea = document.createElement('div');
+                    leftArea.className = 'todo-item-left';
+                    leftArea.addEventListener('click', () => toggleTodo(todo.id));
+
+                    // チェックボックス
+                    const checkbox = document.createElement('div');
+                    checkbox.className = 'checkbox-container';
+                    
+                    // チェックマーク（インラインSVG）
+                    const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    checkSvg.setAttribute('class', 'checkbox-icon');
+                    checkSvg.setAttribute('viewBox', '0 0 24 24');
+                    checkSvg.setAttribute('fill', 'none');
+                    checkSvg.setAttribute('stroke', 'currentColor');
+                    checkSvg.setAttribute('stroke-width', '3');
+                    checkSvg.setAttribute('stroke-linecap', 'round');
+                    checkSvg.setAttribute('stroke-linejoin', 'round');
+                    
+                    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                    polyline.setAttribute('points', '20 6 9 17 4 12');
+                    
+                    checkSvg.appendChild(polyline);
+                    checkbox.appendChild(checkSvg);
+
+                    // テキスト
+                    const span = document.createElement('span');
+                    span.className = 'todo-text';
+                    span.textContent = todo.text;
+
+                    leftArea.appendChild(checkbox);
+                    leftArea.appendChild(span);
+
+                    // 削除ボタン
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.ariaLabel = '削除';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // 親要素のクリックイベント（完了トグル）を防ぐ
+                        deleteTodo(todo.id);
+                    });
+
+                    // ゴミ箱アイコン（インラインSVG）
+                    const trashSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    trashSvg.setAttribute('class', 'delete-icon');
+                    trashSvg.setAttribute('viewBox', '0 0 24 24');
+                    
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z');
+                    
+                    trashSvg.appendChild(path);
+                    deleteBtn.appendChild(trashSvg);
+
+                    li.appendChild(leftArea);
+                    li.appendChild(deleteBtn);
+                    todoList.appendChild(li);
+                });
+            }
+
+            updateStats();
+        };
+
+        // イベントリスナーの登録
+        todoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = todoInput.value;
+            if (text.trim() !== '') {
+                addTodo(text);
+            }
+        });
+
+        // フィルターボタンのイベント制御
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentFilter = e.target.getAttribute('data-filter');
+                renderTodos();
+            });
+        });
+
+        // 初期実行
+        setDate();
+        renderTodos();
+    </script>
+</body>
+</html>
